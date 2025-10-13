@@ -1,0 +1,11 @@
+node_modules/
+*.log
+.DS_Store
+
+# Old data directory (deprecated)
+data/*.json
+!data/.gitkeep
+
+# Reports directory (new structure)
+reports/
+!reports/.gitkeep

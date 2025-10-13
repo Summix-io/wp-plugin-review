@@ -1,17 +1,10 @@
 ---
 description: Perform competitive analysis of WordPress plugin reviews to identify strengths, weaknesses, and market opportunities
-argument-hint: <plugin-slug> [--pages=N] [--output=report.md]
+argument-hint: <plugin-slug> [--months=N] [--output=report.md]
 allowed-tools:
-  - Bash:
-      allowed-commands:
-        - curl
-        - python3
-        - /tmp/venv/bin/python3
-        - /tmp/venv/bin/pip
-        - pip
-        - chmod
-        - ls
-        - sleep
+  - Bash
+  - Read
+  - Write
 ---
 
 You are conducting a competitive intelligence analysis of WordPress plugin reviews to understand market positioning, user satisfaction, and opportunity gaps.
@@ -23,93 +16,116 @@ Analyze plugin reviews from WordPress.org for the plugin: **$1**
 ## Analysis Parameters
 
 - Plugin Slug: $1
+- Time Range: Last 12 months (default, override with --months=N)
 - Additional Arguments: $ARGUMENTS
 - Analysis Depth: Comprehensive (sentiment, patterns, categorization)
 
 ## Step 1: Data Collection
 
-First, fetch review data from the WordPress.org plugin directory.
+Use the **JavaScript review fetcher script** to extract review data from WordPress.org plugin directory for the **last 12 months** (or custom period if --months=N specified).
 
-**IMPORTANT:** Use curl with proper headers to avoid empty responses:
+**Prerequisites:**
 
+1. Ensure dependencies are installed (run once at start):
 ```bash
-curl -L -A "Mozilla/5.0" "https://wordpress.org/plugins/$1/reviews/" -o /tmp/wp_reviews_page_1.html
+npm install
 ```
 
-Key curl flags:
-- `-L`: Follow redirects
-- `-A "Mozilla/5.0"`: Set user agent (required by WordPress.org)
-- `-s`: Silent mode (optional, for cleaner output)
+**Running the Fetcher:**
 
-For analyzing just page 1 (typically 10-15 reviews), this is usually sufficient for initial analysis. Fetch additional pages if requested via `--pages=N` argument:
+Execute the review fetcher with the appropriate options:
 
 ```bash
-curl -L -A "Mozilla/5.0" "https://wordpress.org/plugins/$1/reviews/page/2/" -o /tmp/wp_reviews_page_2.html
+node src/index.js $1 --months=12
 ```
 
-**Parse review information using Python with BeautifulSoup:**
+**Parse --months from arguments:**
+- Check if --months=N is present in $ARGUMENTS
+- Extract the number N from --months=N
+- Pass it to the script: `--months=N`
+- Default to 12 if not specified
 
-You MUST use Python for HTML parsing (not grep/sed/awk). Create a Python script that:
-1. Reads the HTML file
-2. Uses BeautifulSoup to parse structure
-3. Extracts review data - **NOTE:** WordPress.org uses **bbPress forum structure**, not simple `<div class="review">` elements
-4. Saves results to JSON for easy processing
+**The script will automatically:**
+1. Calculate cutoff date: Today's date minus N months (default 12)
+2. Fetch pages sequentially from WordPress.org
+3. Parse all review data (rating, title, author, date, content, topic URL)
+4. Check the oldest review date on each page
+5. Stop pagination when reaching reviews older than cutoff date
+6. Filter all collected reviews to only include those within time range
+7. Save results to: `data/{plugin-slug}-reviews-{date}.json`
+8. Display rating statistics in console
 
-**Required setup:**
-```bash
-python3 -m venv /tmp/venv
-/tmp/venv/bin/pip install beautifulsoup4 lxml -q
-```
+**Script Output:**
 
-Use `/tmp/venv/bin/python3` for all subsequent Python scripts.
-
-**IMPORTANT:** WordPress.org plugin review pages use bbPress forum structure:
-- Each review is in a `<ul id="bbp-topic-{id}">` element
-- Title is in `<a class="bbp-topic-permalink">`
-- Rating is in `<div class="wporg-ratings">` with filled/empty star spans
-- Author is in `<span class="bbp-author-name">`
-- Date is in `<li class="bbp-topic-freshness">`
-- **Review content is NOT on the list page** - you need to fetch individual topic URLs to get full review text
-
-## Step 2: Review Data Extraction
-
-**Parse reviews using Python + BeautifulSoup:**
-
-Extract from each review list page:
-- **Rating**: Star rating (1-5 stars) - count `<span class="dashicons-star-filled">` elements inside `<div class="wporg-ratings">`
-- **Review Title**: From `<a class="bbp-topic-permalink">` text (remove rating div text)
-- **Topic URL**: From `href` attribute of `<a class="bbp-topic-permalink">` - needed to fetch full content
-- **Reviewer Name**: From `<span class="bbp-author-name">`
-- **Date**: From `<li class="bbp-topic-freshness">` link's title attribute or text
-- **Reply Count**: From `<li class="bbp-topic-reply-count">` (engagement indicator)
-
-**To get full review content:** Fetch individual topic URLs using curl with same headers, then parse:
-- Look for `<div class="bbp-topic-content">` or `<div class="bbp-reply-content">`
-- Use `.get_text(separator=' ', strip=True)` to extract clean text
-
-**Structure for JSON output:**
+The script will create a JSON file with this structure:
 ```json
 {
-  "plugin": "plugin-slug",
-  "total_reviews": 60,
-  "extraction_date": "2025-10-12T17:39:19",
+  "pluginSlug": "plugin-name",
+  "fetchDate": "2025-10-13T10:30:00.000Z",
+  "monthsBack": 12,
+  "cutoffDate": "2024-10-13T10:30:00.000Z",
+  "totalReviewsFetched": 150,
+  "reviewsInRange": 120,
+  "pagesFetched": 5,
   "reviews": [
     {
       "rating": 5,
-      "title": "Amazing plugin!",
-      "content": "Full review text...",
+      "title": "Great plugin!",
       "author": "username",
-      "date": "October 12, 2025 at 3:53 pm",
-      "topic_url": "https://wordpress.org/support/topic/...",
-      "reply_count": "2"
+      "date": "October 12, 2025",
+      "content": "Full review text...",
+      "topicUrl": "https://wordpress.org/support/topic/...",
+      "dateObject": "2025-10-12T00:00:00.000Z"
     }
   ]
 }
 ```
 
-Save to `/tmp/reviews_data.json` for analysis.
+## Step 2: Load and Organize Review Data
 
-**Performance Tip:** For 60 reviews on 2 pages, fetch content for first 30-40 reviews (most recent) to balance depth vs. time. Use `time.sleep(1)` between fetches.
+**Load the JSON file:**
+
+The fetcher script has already collected and filtered the reviews. Now load the JSON data:
+
+```bash
+# Find the most recent JSON file for this plugin
+ls -t data/${plugin-slug}-reviews-*.json | head -1
+```
+
+Use the **Read tool** to load the JSON file and parse the data.
+
+**Review Data Structure:**
+
+Each review in the JSON contains:
+- `rating` - 1-5 stars
+- `title` - Review headline
+- `author` - Username
+- `date` - Human-readable date string
+- `dateObject` - ISO date for sorting
+- `content` - Full review text
+- `topicUrl` - Link to review thread
+
+**Metadata Available:**
+
+The JSON file includes metadata:
+- `pluginSlug` - Plugin identifier
+- `fetchDate` - When data was collected
+- `monthsBack` - Time range requested
+- `cutoffDate` - Date filter applied
+- `totalReviewsFetched` - Raw count before filtering
+- `reviewsInRange` - Filtered count within time range
+- `pagesFetched` - Number of pages processed
+- `reviews` - Array of review objects
+
+**Data is Pre-Filtered:**
+
+The script has already:
+- Fetched all necessary pages
+- Filtered reviews by date range
+- Removed reviews outside the time window
+- Organized data in structured format
+
+You can now proceed directly to analysis.
 
 ## Step 3: Review Categorization
 
@@ -162,7 +178,7 @@ For each review, identify and extract:
 
 ## Step 4: Pattern Recognition & Analysis
 
-After extracting review data with BeautifulSoup and saving to JSON, **READ and ANALYZE the JSON data yourself** to identify patterns:
+After loading the review data from JSON, **ANALYZE the collected data yourself** to identify patterns:
 
 1. **Common Praise**: What features/aspects are consistently mentioned positively?
 2. **Recurring Complaints**: What issues appear across multiple reviews?
@@ -180,292 +196,227 @@ After extracting review data with BeautifulSoup and saving to JSON, **READ and A
 - Context around feature requests
 - Business impact statements from users
 
-## Step 5: Generate Comprehensive Report
+## Step 5: Generate Concise Report
 
-Create a structured report with the following sections:
+Create a structured report with the following sections. **Be concise** - use bullet points, tables, and summaries instead of lengthy paragraphs.
 
 ### Executive Summary
-- Total reviews analyzed
-- Average rating and distribution
-- Overall sentiment (Positive/Mixed/Negative)
-- Top 3 strengths
-- Top 3 weaknesses
-- Most requested features
+One-page overview with:
+- **Analysis Period**: Last N months (e.g., "Last 12 months: Oct 2024 - Oct 2025")
+- Total reviews analyzed (number within time range)
+- Rating distribution (table with star counts & percentages)
+- Overall sentiment score (1-10)
+- Top 3 strengths (one-line each)
+- Top 3 critical weaknesses (one-line each)
+- Top 3 most requested features (one-line each)
+- **Key Insight**: One paragraph summarizing the competitive opportunity
 
 ### Rating Distribution Analysis
-- Breakdown by star rating (count and percentage)
-- Trend analysis (if dates available)
-- What drives 5-star vs. 1-star reviews
+**Keep this brief** - use a table and 2-3 bullet points:
+- Table: Rating | Count | % | Sentiment
+- What drives 5-star reviews (2-3 bullets)
+- What drives 1-star reviews (2-3 bullets)
+- Note any temporal patterns (version-specific issues)
 
 ### What Users LOVE ❤️
+**Limit to top 5 positive aspects**. For each:
+- **Aspect**: One-line description
+- **Frequency**: % of reviews mentioning
+- **Quote**: One representative paraphrased quote
+- **Impact**: One sentence
 
-For each major positive aspect:
-- **Feature/Aspect**: What users appreciate
-- **Frequency**: How often mentioned (% of positive reviews)
-- **Impact**: Why this matters to users
-- **Example Quotes**: Representative feedback (paraphrased)
-- **User Types**: Who benefits most
-
-Categories to cover:
-- Core Functionality
-- Ease of Use
-- Performance & Reliability
-- Support & Documentation
-- Value & Pricing
-- Integration Capabilities
+Format as compact list, not essay. Skip if genuinely nothing positive.
 
 ### What Users DISLIKE 👎
+**Limit to top 7 critical issues**. For each:
+- **Issue**: One-line description
+- **Frequency**: % of reviews | Severity: Critical/High/Medium
+- **Quote**: One representative paraphrased quote
+- **Impact**: One sentence on business/user effect
 
-For each major negative aspect:
-- **Issue/Complaint**: What frustrates users
-- **Frequency**: How often mentioned (% of negative reviews)
-- **Severity**: Impact on user experience
-- **Affected Users**: Who experiences this problem
-- **Example Feedback**: Representative complaints (paraphrased)
+Format as compact list. Focus on high-frequency and high-severity issues only.
 
-Categories to cover:
-- Bugs & Technical Issues
-- Missing Features
-- Usability Problems
-- Performance Issues
-- Support Concerns
-- Compatibility Problems
+### Feature Requests 🎯
+**Organize into 3 tiers, limit to 10-12 total**:
 
-### Feature Requests Portfolio 🎯
+**Tier 1: Critical Needs** (3-4 items)
+- Feature | Frequency | One-line benefit
 
-**High-Demand Features** (mentioned in multiple reviews)
-- Feature description
-- User benefit
-- Frequency of request
+**Tier 2: Quick Wins** (3-4 items)
+- Feature | Frequency | One-line benefit
 
-**Quick Wins** (frequently requested, seemingly simple enhancements)
-- Simple enhancements with clear value
-- UI/UX improvements
-- Configuration options
+**Tier 3: Strategic Opportunities** (3-4 items)
+- Feature | Frequency | One-line benefit
 
-**Strategic Opportunities** (game-changing additions)
-- Major feature additions
-- New use cases enabled
-- Market expansion potential
+Skip lengthy explanations. Use bullet points only.
 
-**Integration Requests**
-- Third-party tool connections
-- API improvements
-- Workflow automations
+### Market Opportunity Assessment 💡
+**This is the money section - keep it actionable**:
 
-### User Satisfaction Insights
+**Market Gaps** (top 3-5 only):
+- **Gap**: One-line description
+- **Size**: Huge/Large/Medium | **Willingness to Pay**: High/Medium/Low
+- **Opportunity**: One sentence
 
-**Power Users vs. Beginners**
-- What each group values
-- Different pain points
-- Feature prioritization differences
+**Competitive Position**:
+- Current plugin threat level: None/Low/Medium/High (one sentence why)
+- Opportunity window: Wide Open/Open/Narrow/Closed (one sentence why)
+- Market validation: One paragraph summarizing evidence
 
-**Use Case Analysis**
-- How different users apply the plugin
-- Industry-specific needs
-- Workflow patterns
+**Quick Recommendations**:
+- Target audience: 2-3 primary segments (one-line each)
+- Key differentiators: 3-4 bullet points
+- Positioning statement: One sentence
+- Marketing message: One powerful headline
 
-**Loyalty Indicators**
-- Long-term user retention signals
-- Recommendation likelihood
-- Brand advocacy
+### Sentiment Analysis (Brief)
+**One-page summary**:
+- Sentiment breakdown: Table (Positive/Mixed/Negative | % | Key themes)
+- Emotional tone: 3-5 bullet points (anger, frustration, resignation, etc.)
+- Community health score: X/10 with one-sentence assessment
+- Review authenticity: One sentence confidence level
 
-### Competitive Intelligence
+### Temporal Patterns (If Significant)
+**Only include if there are version-specific crises or clear trends**:
+- Crisis periods: Table (Date | Version | Issue | Impact)
+- Trend direction: Getting better/worse/stable (one sentence)
+- Recovery patterns: 2-3 bullets on common workarounds
 
-**Plugin Comparisons**
-- Alternatives users mention
-- Competitive advantages cited
-- Where plugin excels vs. competitors
-- Migration risks
+### Data Appendix (Condensed)
+**One page maximum**:
+- **Sources**: Plugin slug, time period analyzed (last N months), actual date range (oldest to newest), total reviews
+- **Top Keywords**: Two tables (Positive terms | Negative terms with frequencies)
+- **Technical Errors**: If critical, include 1-2 key error messages
+- **Confidence**: High/Medium/Low with one-sentence reasoning
 
-**Market Position**
-- How users describe the plugin's value
-- Price/value perception
-- Target audience fit
+---
 
-### Sentiment & Community Health
+## Report Writing Guidelines
 
-**Overall Sentiment Breakdown**
-- Positive: % and themes
-- Mixed: % and common "but" statements
-- Negative: % and main complaints
+**IMPORTANT - Keep It Concise:**
+1. **Use tables** instead of paragraphs wherever possible
+2. **Limit examples** to one quote per point (not 3-4)
+3. **Cut redundancy** - don't repeat the same information in multiple sections
+4. **Be selective** - top 5-7 items per category, not exhaustive lists
+5. **One-line summaries** instead of multi-paragraph explanations
+6. **Skip obvious details** - readers understand what "5-star review" means
+7. **Focus on actionable insights** over descriptive analysis
+8. **Target length**: 15-25 pages (not 50+ pages)
 
-**Emotional Tone Analysis**
-- Anger & frustration indicators (words like "disaster", "shameful", "nightmare")
-- Disbelief & shock (questioning if official plugin, expecting better)
-- Resignation & abandonment ("giving up", "avoid at all costs")
-- Business impact emphasis (revenue loss, customer trust damage)
+**Essential vs. Optional:**
+- ✓ **Essential**: Executive summary, rating distribution, top issues, feature requests, market opportunity
+- ✓ **Essential**: Clear evidence and data to back up claims
+- ⚠️ **Conditional**: Temporal patterns (only if significant version issues)
+- ⚠️ **Conditional**: Detailed technical errors (only if critical/common)
+- ✗ **Skip**: Lengthy use case analysis per user type unless dramatically different
+- ✗ **Skip**: Exhaustive keyword lists - keep top 10-15 only
+- ✗ **Skip**: Review-by-review walkthroughs
+- ✗ **Skip**: Repetitive sentiment descriptions across sections
 
-**Review Quality**
-- Detailed vs. brief reviews
-- Constructive feedback ratio
-- Emotional vs. factual reviews
-- Language diversity (note non-English reviews)
-
-**Community Engagement**
-- Developer responses to reviews
-- User interaction patterns (user-to-user help)
-- Support visibility in reviews
-
-**Community Health Score**
-- Trust in developers (shattered/high/low)
-- Hope for improvement (none/some/strong)
-- Active support (absent/minimal/good)
-- User advocacy (negative/neutral/positive)
-
-### Competitive Opportunity Assessment (NEW)
-
-**Market Gaps This Plugin Creates**
-For each major gap:
-- Gap size (huge/large/medium/small)
-- Market size estimate
-- Willingness to pay (high/medium/low)
-- Barrier to entry
-- Specific opportunity description
-
-**Unmet Market Needs**
-- Ranked list of needs not being met by current plugin
-- Validation from user complaints
-
-**Threats from Current Plugin**
-- How competitive is the current plugin?
-- What's the opportunity window?
-- Market validation through pain points
-
-**Recommendations for Competitors**
-- Immediate market opportunities
-- Marketing strategy suggestions
-- Target audience identification
-- Key messaging based on user pain points
-
-### Trend Analysis (NEW)
-
-**Temporal Patterns**
-- Identify crisis periods (mass 1-star reviews on specific dates)
-- Ongoing vs. one-time issues
-- Pattern recognition across time
-
-**Version-Specific Issues**
-- Table of versions and their problems
-- Recommended vs. broken versions
-- Plugin getting better or worse over time?
-
-**Recovery Patterns**
-- How users fix issues when they occur
-- Recovery time estimates
-- Business impact of downtime
-
-### Appendices
-
-**Appendix A: Data Sources**
-- Date range of reviews analyzed
-- Total review count per rating
-- Version coverage
-- Extraction methodology
-
-**Appendix B: Keyword Frequency**
-- Most common positive terms (with frequency)
-- Most common negative terms (with frequency)
-- Most common problem areas (with frequency)
-- Feature request keywords
-- Language distribution
-
-**Appendix C: Technical Error Details** (if applicable)
-- Common fatal errors with stack traces
-- Root causes identified
-- User workarounds documented
-
-**Appendix D: Review Authenticity Assessment**
-- Indicators of genuine reviews
-- Confidence level in data
-- Any evidence of manipulation or spam
+**Tone:**
+- Direct and actionable
+- Data-driven but concise
+- Business-focused (this is competitive intelligence, not academic research)
+- Use strong statements backed by numbers
 
 ## Output Format
 
-Generate the report as a well-structured Markdown document with:
-- Clear headings and subheadings
-- Emoji indicators for sections (❤️ 👎 🎯 ⭐)
-- Bullet points for scannability
-- Tables for rating distribution
-- Blockquotes for paraphrased user feedback
-- Visual emphasis (bold) for key findings
-- Star ratings displayed clearly (★★★★★)
+Generate the report as a well-structured, **scannable** Markdown document:
+- Clear hierarchical headings (##, ###)
+- Emoji indicators for major sections (❤️ 👎 🎯 💡)
+- **Heavy use of tables** for data presentation
+- **Bullet points** (not paragraphs) for lists
+- **One quote per point maximum** using > blockquote format
+- **Bold** for emphasis on key insights and numbers
+- Star ratings: Use simple format (5★, 1★)
+
+**Formatting Examples:**
+
+✓ Good (concise):
+> "Site crashed after update, lost business hours during peak season" - June 2025 reviewer
+
+✗ Bad (verbose):
+> One user stated in their review that they experienced significant technical difficulties when they updated the plugin, which resulted in their website becoming completely inaccessible. This occurred during what they described as a particularly important time for their business operations...
+
+**Table Format Example:**
+| Issue | Freq | Severity | Impact |
+|-------|------|----------|--------|
+| Site crashes | 58% | Critical | Revenue loss |
 
 ## Quality Checks
 
-Before finalizing:
-- ✓ Verify rating distribution adds up to 100%
-- ✓ Cross-reference patterns across multiple reviews
-- ✓ Include specific examples (paraphrased, not quoted)
-- ✓ Maintain objectivity in analysis
-- ✓ Balance positive and negative findings fairly
-- ✓ Prioritize insights by frequency and impact
+Before finalizing, verify:
+- ✓ Rating distribution adds up to ~100%
+- ✓ Top insights backed by frequency data (% or count)
+- ✓ No redundant information across sections
+- ✓ Report length: 15-25 pages (not 50+)
+- ✓ Each section has clear, scannable structure
+- ✓ Tables used for all comparative/statistical data
+- ✓ Actionable recommendations included
+- ✓ Focus on competitive intelligence value
 
 ## Implementation Best Practices
 
-### Python Environment Setup
-**ALWAYS create a virtual environment** to avoid system package conflicts:
-```bash
-python3 -m venv /tmp/venv
-/tmp/venv/bin/pip install beautifulsoup4 -q
-```
+### Using the JavaScript Fetcher
 
-Use `/tmp/venv/bin/python3` for all Python scripts (NOT just `python3`).
+**Tool Overview:**
+The project includes a custom JavaScript review fetcher that handles all data collection automatically.
 
-### curl Best Practices
-**ALWAYS include these flags** when fetching from WordPress.org:
-- `-L` : Follow redirects
-- `-A "Mozilla/5.0"` : Set user agent (required!)
-- `-s` : Silent mode (optional)
+**Location:** `src/index.js`
 
-**Example:** `curl -L -A "Mozilla/5.0" -s "URL" -o output.html`
+**Workflow:**
+1. **Install dependencies** (first time only):
+   ```bash
+   npm install
+   ```
 
-Without `-L` and `-A`, you may get empty responses or 403 errors.
+2. **Run the fetcher** with Bash tool:
+   ```bash
+   node src/index.js {plugin-slug} --months={N}
+   ```
 
-### HTML Parsing Strategy
-**DO NOT use grep/sed/awk for HTML parsing** - structure is too complex.
+3. **The script automatically:**
+   - Fetches pages sequentially from WordPress.org
+   - Parses HTML to extract review data
+   - Filters by date range
+   - Saves to JSON file in `data/` directory
+   - Displays progress and statistics
 
-**USE BeautifulSoup** to extract from bbPress forum structure:
-- Review topics: `soup.find_all('ul', id=lambda x: x and x.startswith('bbp-topic-'))`
-- Rating: Count `<span class="dashicons-star-filled">` within `<div class="wporg-ratings">`
-- Title: `review_ul.find('a', class_='bbp-topic-permalink').get_text(strip=True)`
-- Author: `review_ul.find('span', class_='bbp-author-name').get_text(strip=True)`
-- Date: `review_ul.find('li', class_='bbp-topic-freshness').find('a').get('title')`
-- Topic URL: `review_ul.find('a', class_='bbp-topic-permalink').get('href')`
+4. **Load the data** with Read tool:
+   - Find file: `ls -t data/{plugin-slug}-reviews-*.json | head -1`
+   - Read file: Use Read tool on the JSON path
+   - Parse JSON and analyze reviews
 
-**For full review content**, fetch individual topic pages and look for:
-- `soup.find('div', class_='bbp-topic-content')` - the main review text
-- Remove nested `<div class="bbp-reply-content">` if present (those are replies, not the review)
-
-**Important:** WordPress.org uses bbPress forum software for reviews, not a custom review system. Always inspect HTML structure first before writing extraction code.
-
-### Work Directory
-- Save all fetched HTML to `/tmp/` directory
-- Save processed data (JSON) to `/tmp/` for easy access
-- Save final report to current working directory: `{plugin-slug}-reviews-analysis.md`
-
-### Rate Limiting
-**Always add delays** between page requests to WordPress.org:
-```bash
-sleep 1  # 1 second between page fetches
-```
+### Data Files
+- **Review data**: Saved to `data/{plugin-slug}-reviews-{date}.json`
+- **Final report**: Save to current directory as `{plugin-slug}-competitive-analysis.md`
 
 ### Analysis Scope
-- For most plugins, **pages 1-2 (20-30 reviews) is sufficient** for comprehensive analysis
-- Each page typically shows 15-30 reviews
-- Include reviews from all rating levels for balanced perspective
-- If plugin has 100+ reviews, sample across different time periods
+- **Time-based**: Script fetches reviews from last N months (default 12)
+- **Parse --months argument**: Extract from $ARGUMENTS and pass to script
+- **Automatic filtering**: Script handles date filtering and pagination
+- **Complete data**: All reviews within time range are included
+- **Metadata included**: Review count, date range, pages fetched
 
-### Content Fetching Strategy
-**Two-phase approach:**
-1. **Phase 1 (Fast):** Parse review list pages to get titles, ratings, authors, dates, URLs
-2. **Phase 2 (Slower):** Fetch individual topic pages for full review content
+### Script Features
 
-**Optimization:**
-- For 60 reviews across 2 pages, fetch content for first 30-40 reviews (most recent)
-- This balances analysis depth with execution time
-- Use `subprocess.run(['curl', '-L', '-A', 'Mozilla/5.0', '-s', url], capture_output=True)` in Python
-- Add `time.sleep(1)` between fetches to be respectful to WordPress.org servers
+**Smart Pagination:**
+- Starts with page 1
+- Checks oldest review date on each page
+- Stops when reaching reviews older than cutoff
+- Typical plugins: 2-5 pages cover 12 months
+- High-volume plugins: May fetch 10+ pages
+
+**Data Quality:**
+- Extracts rating, title, author, date, content, topic URL
+- Handles missing fields gracefully
+- Filters out reviews outside time range
+- Provides pre-filtered, clean data for analysis
+
+**Rate Limiting:**
+- 1 second delay between requests (default)
+- Respectful to WordPress.org servers
+- Configurable via `--delay` parameter
 
 ## Special Cases & Edge Cases
 
@@ -501,9 +452,26 @@ sleep 1  # 1 second between page fetches
 
 ## Additional Instructions
 
-If the plugin slug is invalid or inaccessible, provide guidance on correct plugin identification. If reviews are minimal or non-existent, adjust the analysis scope accordingly and note limitations in the report.
+**Time Range Handling:**
+- Default: Last 12 months from today
+- Custom: Parse --months=N from arguments (e.g., --months=6 for 6 months, --months=18 for 18 months)
+- Calculate cutoff date: Today's date minus N months
+- Document actual date range in report (oldest and newest review dates)
 
-**Important:** WordPress.org review pages may require careful inspection to identify the correct HTML structure and CSS classes for parsing. Start by examining the HTML structure before writing extraction code.
+**Example Calculations:**
+- Today: October 13, 2025
+- Default (12 months): Include reviews from October 13, 2024 onward
+- Custom --months=6: Include reviews from April 13, 2025 onward
+- Custom --months=18: Include reviews from April 13, 2024 onward
+
+**Edge Cases:**
+- If plugin has fewer reviews than expected in time range, note this in report
+- If all reviews are within 1-2 pages, that's fine - include them all
+- If plugin is new (< 12 months old), analyze all available reviews and note actual time span
+- If the script encounters errors, check the error message and retry or report the issue
+
+**Plugin Validation:**
+If the plugin slug is invalid or inaccessible, provide guidance on correct plugin identification. If reviews are minimal or non-existent, adjust the analysis scope accordingly and note limitations in the report.
 
 **Output Location:** Save the final markdown report to the current working directory with filename: `{plugin-slug}-competitive-analysis.md`
 

@@ -1,0 +1,24 @@
+{
+  "name": "wp-plugin-review-fetcher",
+  "version": "1.0.0",
+  "description": "A simple JavaScript tool to fetch and store WordPress plugin reviews from WordPress.org",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "example": "node examples/fetch-reviews.js"
+  },
+  "keywords": [
+    "wordpress",
+    "plugin",
+    "reviews",
+    "scraper",
+    "analysis"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "cheerio": "^1.0.0-rc.12",
+    "node-fetch": "^3.3.2"
+  }
+}
