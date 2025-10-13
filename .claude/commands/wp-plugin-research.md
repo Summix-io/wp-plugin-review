@@ -198,162 +198,23 @@ After loading the review data from JSON, **ANALYZE the collected data yourself**
 
 ## Step 5: Generate Concise Report
 
-Create a structured report with the following sections. **Be concise** - use bullet points, tables, and summaries instead of lengthy paragraphs.
+Follow the report template structure defined in [report-templates/competitive-analysis-template.md](report-templates/competitive-analysis-template.md).
 
-### Executive Summary
-One-page overview with:
-- **Analysis Period**: Last N months (e.g., "Last 12 months: Oct 2024 - Oct 2025")
-- Total reviews analyzed (number within time range)
-- Rating distribution (table with star counts & percentages)
-- Overall sentiment score (1-10)
-- Top 3 strengths (one-line each)
-- Top 3 critical weaknesses (one-line each)
-- Top 3 most requested features (one-line each)
-- **Key Insight**: One paragraph summarizing the competitive opportunity
+The template provides comprehensive guidelines for:
+- **Report structure**: All required sections (Executive Summary, Rating Distribution, What Users Love/Dislike, Feature Requests, Market Opportunity, etc.)
+- **Content analysis guidelines**: What to look for in positive/negative aspects and feature requests
+- **Pattern recognition focus**: Key insights to identify in the review data
+- **Report writing guidelines**: Conciseness rules, essential vs. optional sections, tone
+- **Output format**: Markdown formatting, tables, quotes, emojis
+- **Quality checks**: Validation criteria before finalizing
+- **Special cases**: How to handle misclassified reviews, empty content, non-English reviews, version-specific crises, spam
 
-### Rating Distribution Analysis
-**Keep this brief** - use a table and 2-3 bullet points:
-- Table: Rating | Count | % | Sentiment
-- What drives 5-star reviews (2-3 bullets)
-- What drives 1-star reviews (2-3 bullets)
-- Note any temporal patterns (version-specific issues)
-
-### What Users LOVE ❤️
-**Limit to top 5 positive aspects**. For each:
-- **Aspect**: One-line description
-- **Frequency**: % of reviews mentioning
-- **Quote**: One representative paraphrased quote
-- **Impact**: One sentence
-
-Format as compact list, not essay. Skip if genuinely nothing positive.
-
-### What Users DISLIKE 👎
-**Limit to top 7 critical issues**. For each:
-- **Issue**: One-line description
-- **Frequency**: % of reviews | Severity: Critical/High/Medium
-- **Quote**: One representative paraphrased quote
-- **Impact**: One sentence on business/user effect
-
-Format as compact list. Focus on high-frequency and high-severity issues only.
-
-### Feature Requests 🎯
-**Organize into 3 tiers, limit to 10-12 total**:
-
-**Tier 1: Critical Needs** (3-4 items)
-- Feature | Frequency | One-line benefit
-
-**Tier 2: Quick Wins** (3-4 items)
-- Feature | Frequency | One-line benefit
-
-**Tier 3: Strategic Opportunities** (3-4 items)
-- Feature | Frequency | One-line benefit
-
-Skip lengthy explanations. Use bullet points only.
-
-### Market Opportunity Assessment 💡
-**This is the money section - keep it actionable**:
-
-**Market Gaps** (top 3-5 only):
-- **Gap**: One-line description
-- **Size**: Huge/Large/Medium | **Willingness to Pay**: High/Medium/Low
-- **Opportunity**: One sentence
-
-**Competitive Position**:
-- Current plugin threat level: None/Low/Medium/High (one sentence why)
-- Opportunity window: Wide Open/Open/Narrow/Closed (one sentence why)
-- Market validation: One paragraph summarizing evidence
-
-**Quick Recommendations**:
-- Target audience: 2-3 primary segments (one-line each)
-- Key differentiators: 3-4 bullet points
-- Positioning statement: One sentence
-- Marketing message: One powerful headline
-
-### Sentiment Analysis (Brief)
-**One-page summary**:
-- Sentiment breakdown: Table (Positive/Mixed/Negative | % | Key themes)
-- Emotional tone: 3-5 bullet points (anger, frustration, resignation, etc.)
-- Community health score: X/10 with one-sentence assessment
-- Review authenticity: One sentence confidence level
-
-### Temporal Patterns (If Significant)
-**Only include if there are version-specific crises or clear trends**:
-- Crisis periods: Table (Date | Version | Issue | Impact)
-- Trend direction: Getting better/worse/stable (one sentence)
-- Recovery patterns: 2-3 bullets on common workarounds
-
-### Data Appendix (Condensed)
-**One page maximum**:
-- **Sources**: Plugin slug, time period analyzed (last N months), actual date range (oldest to newest), total reviews
-- **Top Keywords**: Two tables (Positive terms | Negative terms with frequencies)
-- **Technical Errors**: If critical, include 1-2 key error messages
-- **Confidence**: High/Medium/Low with one-sentence reasoning
-
----
-
-## Report Writing Guidelines
-
-**IMPORTANT - Keep It Concise:**
-1. **Use tables** instead of paragraphs wherever possible
-2. **Limit examples** to one quote per point (not 3-4)
-3. **Cut redundancy** - don't repeat the same information in multiple sections
-4. **Be selective** - top 5-7 items per category, not exhaustive lists
-5. **One-line summaries** instead of multi-paragraph explanations
-6. **Skip obvious details** - readers understand what "5-star review" means
-7. **Focus on actionable insights** over descriptive analysis
-8. **Target length**: 15-25 pages (not 50+ pages)
-
-**Essential vs. Optional:**
-- ✓ **Essential**: Executive summary, rating distribution, top issues, feature requests, market opportunity
-- ✓ **Essential**: Clear evidence and data to back up claims
-- ⚠️ **Conditional**: Temporal patterns (only if significant version issues)
-- ⚠️ **Conditional**: Detailed technical errors (only if critical/common)
-- ✗ **Skip**: Lengthy use case analysis per user type unless dramatically different
-- ✗ **Skip**: Exhaustive keyword lists - keep top 10-15 only
-- ✗ **Skip**: Review-by-review walkthroughs
-- ✗ **Skip**: Repetitive sentiment descriptions across sections
-
-**Tone:**
-- Direct and actionable
-- Data-driven but concise
-- Business-focused (this is competitive intelligence, not academic research)
-- Use strong statements backed by numbers
-
-## Output Format
-
-Generate the report as a well-structured, **scannable** Markdown document:
-- Clear hierarchical headings (##, ###)
-- Emoji indicators for major sections (❤️ 👎 🎯 💡)
-- **Heavy use of tables** for data presentation
-- **Bullet points** (not paragraphs) for lists
-- **One quote per point maximum** using > blockquote format
-- **Bold** for emphasis on key insights and numbers
-- Star ratings: Use simple format (5★, 1★)
-
-**Formatting Examples:**
-
-✓ Good (concise):
-> "Site crashed after update, lost business hours during peak season" - June 2025 reviewer
-
-✗ Bad (verbose):
-> One user stated in their review that they experienced significant technical difficulties when they updated the plugin, which resulted in their website becoming completely inaccessible. This occurred during what they described as a particularly important time for their business operations...
-
-**Table Format Example:**
-| Issue | Freq | Severity | Impact |
-|-------|------|----------|--------|
-| Site crashes | 58% | Critical | Revenue loss |
-
-## Quality Checks
-
-Before finalizing, verify:
-- ✓ Rating distribution adds up to ~100%
-- ✓ Top insights backed by frequency data (% or count)
-- ✓ No redundant information across sections
-- ✓ Report length: 15-25 pages (not 50+)
-- ✓ Each section has clear, scannable structure
-- ✓ Tables used for all comparative/statistical data
-- ✓ Actionable recommendations included
-- ✓ Focus on competitive intelligence value
+**Key Points:**
+- Target length: 15-25 pages (not 50+)
+- Use tables instead of paragraphs
+- One quote per point maximum
+- Focus on actionable competitive intelligence
+- Be selective: top 5-7 items per category
 
 ## Implementation Best Practices
 
@@ -388,8 +249,9 @@ The project includes a custom JavaScript review fetcher that handles all data co
    - Parse JSON and analyze reviews
 
 ### Data Files
-- **Review data**: Saved to `data/{plugin-slug}-reviews-{date}.json`
-- **Final report**: Save to current directory as `{plugin-slug}-competitive-analysis.md`
+- **Review data**: Saved to `reports/{plugin-slug}/{YYYY-MM-DD}/reviews.json`
+- **Final report**: Saved to `reports/{plugin-slug}/{YYYY-MM-DD}/competitive-analysis.md`
+- **Directory structure**: All files for a plugin analysis are grouped by date
 
 ### Analysis Scope
 - **Time-based**: Script fetches reviews from last N months (default 12)
@@ -418,38 +280,6 @@ The project includes a custom JavaScript review fetcher that handles all data co
 - Respectful to WordPress.org servers
 - Configurable via `--delay` parameter
 
-## Special Cases & Edge Cases
-
-### Misclassified Reviews
-**Watch for:** 5-star reviews that contain negative content
-- Some users accidentally select wrong star rating
-- Some users give 5 stars sarcastically with negative title
-- **Action:** Manually verify 5-star reviews; note discrepancies in report
-- Example: "They don't care or maintain this plugin" with 5 stars
-
-### Empty Review Content
-**Watch for:** Reviews with titles but no content text
-- Older reviews may have minimal content
-- Some users leave only star rating + title
-- **Action:** Still valuable for sentiment analysis from title and rating
-
-### Non-English Reviews
-**Watch for:** Reviews in Spanish, Portuguese, Italian, German, etc.
-- WordPress.org is global; plugins get international reviews
-- **Action:** Include in analysis; sentiment often clear from context
-- Note language distribution in report appendix
-
-### Version-Specific Crises
-**Watch for:** Clusters of 1-star reviews on same dates mentioning specific versions
-- Indicates catastrophic update failure
-- **Action:** Highlight as critical issue in report with timeline
-- Example: "Version 3.5.0 - site crash" pattern in June 2025
-
-### Spam/Invalid Reviews
-**Watch for:** Generic single-word reviews, repetitive patterns
-- Usually minimal on WordPress.org due to moderation
-- **Action:** Filter out obvious spam; note in data quality section
-
 ## Additional Instructions
 
 **Time Range Handling:**
@@ -473,6 +303,15 @@ The project includes a custom JavaScript review fetcher that handles all data co
 **Plugin Validation:**
 If the plugin slug is invalid or inaccessible, provide guidance on correct plugin identification. If reviews are minimal or non-existent, adjust the analysis scope accordingly and note limitations in the report.
 
-**Output Location:** Save the final markdown report to the current working directory with filename: `{plugin-slug}-competitive-analysis.md`
+**Output Location:**
+The fetcher script automatically creates the directory structure and saves files to:
+- `reports/{plugin-slug}/{YYYY-MM-DD}/reviews.json` - Raw review data
+- `reports/{plugin-slug}/{YYYY-MM-DD}/report.md` - Initial analysis summary
+
+**Your Task:**
+After analyzing the reviews, save your comprehensive competitive intelligence report to:
+- `reports/{plugin-slug}/{YYYY-MM-DD}/competitive-analysis.md`
+
+This keeps all analysis files organized by plugin and date.
 
 Begin the analysis now and provide comprehensive competitive intelligence that highlights competitor strengths, weaknesses, and unmet market needs.
