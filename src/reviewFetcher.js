@@ -7,7 +7,7 @@ import * as cheerio from 'cheerio';
 export class ReviewFetcher {
   constructor(pluginSlug, options = {}) {
     this.pluginSlug = pluginSlug;
-    this.baseUrl = `https://wordpress.org/plugins/${pluginSlug}/reviews/`;
+    this.baseUrl = `https://wordpress.org/support/plugin/${pluginSlug}/reviews/`;
     this.userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36';
     this.delayMs = options.delayMs || 1000; // Delay between requests
     this.maxPages = options.maxPages || 10;
@@ -72,36 +72,47 @@ export class ReviewFetcher {
     const $ = cheerio.load(html);
     const reviews = [];
 
-    $('.review').each((index, element) => {
+    $('ul[id^="bbp-topic-"]').each((index, element) => {
       try {
-        const $review = $(element);
+        const $topic = $(element);
 
-        // Extract rating from data-rating attribute
-        const rating = parseInt($review.find('.wporg-ratings').attr('data-rating') || '0');
+        // Extract title and rating from the topic title link
+        const $titleLink = $topic.find('.bbp-topic-title a.bbp-topic-permalink');
+        const titleWithRating = $titleLink.text().trim();
 
-        // Extract title from h3.review-title a
-        const title = $review.find('.review-title a').text().trim();
+        // Extract rating from the wporg-ratings div inside the title link
+        const ratingText = $titleLink.find('.wporg-ratings').attr('title') || '';
+        const ratingMatch = ratingText.match(/(\d+) out of 5 stars/);
+        const rating = ratingMatch ? parseInt(ratingMatch[1]) : 0;
 
-        // Extract author from span.review-author a
-        const author = $review.find('.review-author a').text().trim();
+        // Remove rating stars from title text
+        const title = titleWithRating.replace(/\s*\n\s*/g, ' ').trim();
 
-        // Extract date
-        const dateText = $review.find('.review-date').text().trim();
+        // Extract author from bbp-topic-started-by
+        const author = $topic.find('.bbp-topic-started-by .bbp-author-name').text().trim();
 
-        // Extract content from div.review-content
-        const content = $review.find('.review-content').text().trim();
+        // Extract date from freshness link title attribute
+        const dateLink = $topic.find('.bbp-topic-freshness a');
+        const dateText = dateLink.attr('title') || dateLink.text().trim();
 
-        // Extract topic URL (link to full review)
-        const topicLink = $review.find('.review-title a').attr('href') || '';
+        // Clean up date text - extract just the date part
+        const dateMatch = dateText.match(/([A-Z][a-z]+ \d+, \d{4})/);
+        const cleanDate = dateMatch ? dateMatch[1] : dateText;
+
+        // Extract topic URL
+        const topicUrl = $titleLink.attr('href') || '';
+
+        // Note: Content is not available on the listing page, would need to fetch individual topic
+        const content = ''; // Content not available in listing
 
         reviews.push({
           rating,
           title,
           author,
-          date: dateText,
+          date: cleanDate,
           content,
-          topicUrl: topicLink,
-          dateObject: this.parseReviewDate(dateText),
+          topicUrl: topicUrl,
+          dateObject: this.parseReviewDate(cleanDate),
         });
       } catch (error) {
         console.warn(`Failed to parse review at index ${index}:`, error.message);
