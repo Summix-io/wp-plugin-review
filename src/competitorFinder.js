@@ -408,6 +408,67 @@ export class CompetitorFinder {
   }
 
   /**
+   * Prioritize tags based on relevance (skip generic tags, prioritize specific functionality)
+   */
+  prioritizeTags(tags) {
+    // Universal low-value tags that should be deprioritized for ANY plugin type
+    const universalLowPriorityTags = [
+      'wordpress', 'plugin', 'plugins', 'free', 'premium', 'pro',
+      'lite', 'shortcode', 'widget', 'widgets', 'admin'
+    ];
+
+    // Very generic marketing/monetization tags (usually secondary features)
+    const secondaryFeatureTags = [
+      'email', 'marketing', 'analytics', 'seo', 'social',
+      'coupon', 'coupons', 'discount', 'affiliate'
+    ];
+
+    // Score each tag
+    const scoredTags = tags.map(tag => {
+      const tagLower = tag.toLowerCase();
+      let score = 10; // Base score
+
+      // Heavily penalize universal generic tags
+      if (universalLowPriorityTags.includes(tagLower)) {
+        score = -20;
+      }
+      // Slightly penalize common secondary feature tags
+      else if (secondaryFeatureTags.some(secondary => tagLower === secondary)) {
+        score = -5;
+      }
+
+      // Boost longer, more specific tags (compound tags like "woocommerce-reviews")
+      const hyphenCount = (tag.match(/-/g) || []).length;
+      if (hyphenCount >= 2) {
+        score += 15; // Very specific tag
+      } else if (hyphenCount === 1) {
+        score += 8; // Moderately specific tag
+      }
+
+      // Boost tags that appear more "technical" or specific (longer tags)
+      if (tag.length > 15) {
+        score += 5;
+      }
+
+      return { tag, score };
+    });
+
+    // Sort by score (descending)
+    scoredTags.sort((a, b) => b.score - a.score);
+
+    // Filter out very low priority tags
+    const relevantTags = scoredTags.filter(t => t.score > 0).map(t => t.tag);
+
+    console.log(`Tag prioritization:`);
+    scoredTags.forEach(t => {
+      console.log(`  ${t.tag}: ${t.score}`);
+    });
+    console.log(`Selected tags for search: ${relevantTags.slice(0, 5).join(', ')}\n`);
+
+    return relevantTags;
+  }
+
+  /**
    * Find competitor plugins
    */
   async findCompetitors() {
@@ -427,8 +488,11 @@ export class CompetitorFinder {
     // Step 2: Find potential competitors using multiple strategies
     const competitorSlugs = new Set();
 
-    // Strategy 1: Search by primary tags
-    for (const tag of targetPlugin.tags.slice(0, 3)) {
+    // Strategy 1: Search by prioritized tags
+    const prioritizedTags = this.prioritizeTags(targetPlugin.tags);
+    const tagsToSearch = prioritizedTags.slice(0, 5); // Use top 5 relevant tags
+
+    for (const tag of tagsToSearch) {
       const slugs = await this.searchPluginsByTag(tag, 15);
       slugs.forEach(slug => {
         if (slug !== this.pluginSlug) {
@@ -496,30 +560,86 @@ export class CompetitorFinder {
   }
 
   /**
+   * Calculate relevance score for a competitor based on similarity to target plugin
+   */
+  calculateRelevanceScore(competitor, targetPlugin) {
+    let score = 0;
+
+    const targetTagsLower = targetPlugin.tags.map(t => t.toLowerCase());
+    const competitorTagsLower = competitor.tags.map(t => t.toLowerCase());
+
+    // 1. Exact tag matches (strongest signal)
+    const exactMatches = competitorTagsLower.filter(tag => targetTagsLower.includes(tag));
+    score += exactMatches.length * 15;
+
+    // 2. Partial tag matches (e.g., "woocommerce" in both "woocommerce-reviews" and "woocommerce-seo")
+    for (const compTag of competitorTagsLower) {
+      for (const targetTag of targetTagsLower) {
+        if (compTag !== targetTag) { // Don't double-count exact matches
+          // Check if tags share meaningful substrings (at least 5 chars to avoid noise)
+          const compParts = compTag.split('-');
+          const targetParts = targetTag.split('-');
+
+          for (const compPart of compParts) {
+            for (const targetPart of targetParts) {
+              if (compPart === targetPart && compPart.length >= 5) {
+                score += 8;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // 3. Category match (if available)
+    if (targetPlugin.category && competitor.category) {
+      if (targetPlugin.category.toLowerCase() === competitor.category.toLowerCase()) {
+        score += 20;
+      }
+    }
+
+    // 4. Penalize widely-used utility/framework plugins (unlikely to be direct competitors)
+    const frameworkPlugins = [
+      'elementor', 'woocommerce', 'wordpress', 'jetpack', 'gutenberg',
+      'yoast', 'yoast-seo', 'wp-optimize', 'wp-rocket', 'wordfence',
+      'akismet', 'wpforms', 'contact-form-7', 'classic-editor'
+    ];
+
+    if (frameworkPlugins.includes(competitor.slug)) {
+      score -= 100;
+    }
+
+    // 5. Check name/description for shared terminology
+    const targetNameDesc = `${targetPlugin.name} ${targetPlugin.description}`.toLowerCase();
+    const competitorNameDesc = `${competitor.name} ${competitor.description}`.toLowerCase();
+
+    // Extract meaningful words (3+ chars) from target plugin
+    const targetWords = targetNameDesc
+      .split(/\s+/)
+      .filter(w => w.length >= 4)
+      .filter(w => !['wordpress', 'plugin', 'free', 'premium', 'with', 'from', 'that', 'this', 'your'].includes(w));
+
+    // Count how many meaningful words appear in competitor
+    let sharedWords = 0;
+    for (const word of targetWords) {
+      if (competitorNameDesc.includes(word)) {
+        sharedWords++;
+      }
+    }
+
+    // Bonus for shared terminology (capped to avoid over-weighting)
+    score += Math.min(sharedWords * 5, 30);
+
+    return score;
+  }
+
+  /**
    * Validate if a plugin is a suitable competitor
    */
   isValidCompetitor(competitor, targetPlugin) {
     // Must have a name
     if (!competitor.name) {
       console.log(`  Rejected ${competitor.slug}: No name`);
-      return false;
-    }
-
-    // Check for tag overlap (case-insensitive partial matching)
-    const targetTagsLower = targetPlugin.tags.map(t => t.toLowerCase());
-    const competitorTagsLower = competitor.tags.map(t => t.toLowerCase());
-
-    const commonTags = competitorTagsLower.filter(tag =>
-      targetTagsLower.some(targetTag =>
-        targetTag.includes(tag) || tag.includes(targetTag) || targetTag === tag
-      )
-    );
-
-    // Must have at least one common tag or same category (case-insensitive)
-    const categoryMatch = competitor.category.toLowerCase() === targetPlugin.category.toLowerCase();
-
-    if (commonTags.length === 0 && !categoryMatch) {
-      console.log(`  Rejected ${competitor.slug}: No common tags (target: [${targetPlugin.tags.join(', ')}], competitor: [${competitor.tags.join(', ')}]) or category match`);
       return false;
     }
 
@@ -537,6 +657,16 @@ export class CompetitorFinder {
       return false;
     }
 
+    // Calculate relevance score
+    const relevanceScore = this.calculateRelevanceScore(competitor, targetPlugin);
+
+    // Require minimum relevance score (higher threshold ensures better quality matches)
+    if (relevanceScore < 30) {
+      console.log(`  Rejected ${competitor.slug}: Low relevance score (${relevanceScore})`);
+      return false;
+    }
+
+    console.log(`  Relevance score for ${competitor.slug}: ${relevanceScore}`);
     return true;
   }
 
